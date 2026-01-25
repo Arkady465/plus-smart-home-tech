@@ -19,6 +19,10 @@ public class CollectorController {
 
     private final KafkaProducerService kafkaProducerService;
 
+    public CollectorController(KafkaProducerService kafkaProducerService) {
+        this.kafkaProducerService = kafkaProducerService;
+    }
+
     @PostMapping("/sensors")
     public ResponseEntity<Void> collectSensorEvent(
             @Valid @RequestBody SensorEvent event) {
