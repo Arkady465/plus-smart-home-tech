@@ -1,0 +1,6 @@
+{
+  "namespace": "ru.yandex.practicum.kafka.telemetry.event",
+  "type": "enum",
+  "name": "ConditionOperationAvro",
+  "symbols": ["EQUALS", "GREATER_THAN", "LOWER_THAN"]
+}
