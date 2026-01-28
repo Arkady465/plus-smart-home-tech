@@ -17,32 +17,36 @@ public class HubEventAvroMapper {
 
         Object payload;
 
-        if (event instanceof DeviceAddedEvent e) {
+        if (event instanceof DeviceAddedEvent) {
+            DeviceAddedEvent e = (DeviceAddedEvent) event;
             payload = DeviceAddedEventAvro.newBuilder()
                     .setId(e.getId())
-                    .setType(DeviceTypeAvro.valueOf(e.getType().name()))
+                    .setType(DeviceTypeAvro.valueOf(e.getDeviceType()))
                     .build();
 
-        } else if (event instanceof DeviceRemovedEvent e) {
+        } else if (event instanceof DeviceRemovedEvent) {
+            DeviceRemovedEvent e = (DeviceRemovedEvent) event;
             payload = DeviceRemovedEventAvro.newBuilder()
                     .setId(e.getId())
                     .build();
 
-        } else if (event instanceof ScenarioAddedEvent e) {
+        } else if (event instanceof ScenarioAddedEvent) {
+            ScenarioAddedEvent e = (ScenarioAddedEvent) event;
             List<ScenarioConditionAvro> conditions = e.getConditions().stream()
                     .map(c -> ScenarioConditionAvro.newBuilder()
                             .setSensorId(c.getSensorId())
-                            .setType(ConditionTypeAvro.valueOf(c.getType().name()))
-                            .setOperation(ConditionOperationAvro.valueOf(c.getOperation().name()))
-                            .setValue(c.getValue())
+                            .setType(ConditionTypeAvro.valueOf(c.getType()))
+                            .setOperation(ConditionOperationAvro.valueOf(c.getOperation()))
+                            // Avro generated types often expect primitive fields; convert to string if needed
+                            .setValue(c.getValue() == null ? null : c.getValue().toString())
                             .build())
                     .collect(Collectors.toList());
 
             List<DeviceActionAvro> actions = e.getActions().stream()
                     .map(a -> DeviceActionAvro.newBuilder()
                             .setSensorId(a.getSensorId())
-                            .setType(ActionTypeAvro.valueOf(a.getType().name()))
-                            .setValue(a.getValue())
+                            .setType(ActionTypeAvro.valueOf(a.getType()))
+                            .setValue(a.getValue() == null ? null : a.getValue())
                             .build())
                     .collect(Collectors.toList());
 
@@ -52,7 +56,8 @@ public class HubEventAvroMapper {
                     .setActions(actions)
                     .build();
 
-        } else if (event instanceof ScenarioRemovedEvent e) {
+        } else if (event instanceof ScenarioRemovedEvent) {
+            ScenarioRemovedEvent e = (ScenarioRemovedEvent) event;
             payload = ScenarioRemovedEventAvro.newBuilder()
                     .setName(e.getName())
                     .build();
@@ -63,7 +68,7 @@ public class HubEventAvroMapper {
 
         return HubEventAvro.newBuilder()
                 .setHubId(event.getHubId())
-                .setTimestamp(event.getTimestamp())
+                .setTimestamp(event.getTimestamp().toEpochMilli())
                 .setPayload(payload)
                 .build();
     }
