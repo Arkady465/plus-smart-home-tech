@@ -11,63 +11,50 @@
         <groupId>ru.yandex.practicum</groupId>
         <artifactId>smart-home-tech</artifactId>
         <version>1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>collector</artifactId>
-
-    <properties>
-        <java.version>21</java.version>
-        <kafka.version>3.7.0</kafka.version>
-        <avro.version>1.11.3</avro.version>
-    </properties>
+    <packaging>jar</packaging>
 
     <dependencies>
 
-        <!-- ===== Spring Web (REST endpoints) ===== -->
+        <!-- Spring Web (HTTP endpoints) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- ===== Kafka (НАТИВНЫЙ producer) ===== -->
+        <!-- Kafka CLIENT (НЕ spring-kafka) -->
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-            <version>${kafka.version}</version>
         </dependency>
 
-        <!-- ===== Avro (локальная сериализация) ===== -->
+        <!-- Avro -->
         <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro</artifactId>
-            <version>${avro.version}</version>
         </dependency>
 
-        <!-- ===== Сгенерированные Avro-схемы ===== -->
+        <!-- Avro schemas module -->
         <dependency>
             <groupId>ru.yandex.practicum</groupId>
             <artifactId>avro-schemas</artifactId>
             <version>${project.version}</version>
         </dependency>
 
-        <!-- ===== Общие модели ===== -->
+        <!-- Validation -->
         <dependency>
-            <groupId>ru.yandex.practicum</groupId>
-            <artifactId>telemetry</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- ===== Lombok ===== -->
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
-        </dependency>
-
-        <!-- ===== Jackson (JSON) ===== -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
         </dependency>
 
     </dependencies>
@@ -75,25 +62,10 @@
     <build>
         <plugins>
 
-            <!-- ===== Java 21 ===== -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <release>${java.version}</release>
-                </configuration>
-            </plugin>
-
-            <!-- ===== Spring Boot JAR (с Main-Class) ===== -->
+            <!-- Spring Boot plugin (для main + jar) -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>
-                        ru.yandex.practicum.collector.CollectorApplication
-                    </mainClass>
-                </configuration>
             </plugin>
 
         </plugins>
