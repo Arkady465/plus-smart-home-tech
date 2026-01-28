@@ -15,13 +15,13 @@ public class HubEventAvroMapper {
 
         if (event instanceof DeviceAddedEvent e) {
             payload = DeviceAddedEventAvro.newBuilder()
-                    .setId(e.getDeviceId())
-                    .setType(DeviceTypeAvro.valueOf(e.getDeviceType()))
+                    .setId(e.getId())
+                    .setType(DeviceTypeAvro.valueOf(e.getType()))
                     .build();
 
         } else if (event instanceof DeviceRemovedEvent e) {
             payload = DeviceRemovedEventAvro.newBuilder()
-                    .setId(e.getDeviceId())
+                    .setId(e.getId())
                     .build();
 
         } else if (event instanceof ScenarioAddedEvent e) {
