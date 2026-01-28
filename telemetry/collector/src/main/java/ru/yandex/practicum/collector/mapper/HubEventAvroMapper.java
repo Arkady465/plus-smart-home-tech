@@ -1,65 +1,66 @@
 package ru.yandex.practicum.collector.mapper;
 
+import org.springframework.stereotype.Component;
 import ru.yandex.practicum.collector.model.hub.*;
 import ru.yandex.practicum.kafka.telemetry.event.*;
 
+import java.util.stream.Collectors;
+
+@Component
 public class HubEventAvroMapper {
 
-    public static HubEventAvro map(HubEvent event) {
+    public HubEventAvro map(HubEvent event) {
 
-        return HubEventAvro.newBuilder()
-                .setHubId(event.getHubId())
-                .setTimestamp(event.getTimestamp())
-                .setPayload(mapPayload(event))
-                .build();
-    }
-
-    private static Object mapPayload(HubEvent event) {
+        Object payload;
 
         if (event instanceof DeviceAddedEvent e) {
-            return DeviceAddedEventAvro.newBuilder()
-                    .setId(e.getId())
-                    .setType(DeviceTypeAvro.valueOf(e.getDeviceType().name()))
+            payload = DeviceAddedEventAvro.newBuilder()
+                    .setId(e.getDeviceId())
+                    .setType(DeviceTypeAvro.valueOf(e.getDeviceType()))
                     .build();
-        }
 
-        if (event instanceof DeviceRemovedEvent e) {
-            return DeviceRemovedEventAvro.newBuilder()
-                    .setId(e.getId())
+        } else if (event instanceof DeviceRemovedEvent e) {
+            payload = DeviceRemovedEventAvro.newBuilder()
+                    .setId(e.getDeviceId())
                     .build();
-        }
 
-        if (event instanceof ScenarioAddedEvent e) {
-            return ScenarioAddedEventAvro.newBuilder()
-                    .setId(e.getScenarioId())
+        } else if (event instanceof ScenarioAddedEvent e) {
+            payload = ScenarioAddedEventAvro.newBuilder()
+                    .setName(e.getName())
                     .setConditions(
                             e.getConditions().stream()
                                     .map(c -> ScenarioConditionAvro.newBuilder()
                                             .setSensorId(c.getSensorId())
-                                            .setType(ConditionTypeAvro.valueOf(c.getType().name()))
-                                            .setOperation(ConditionOperationAvro.valueOf(c.getOperation().name()))
+                                            .setType(ConditionTypeAvro.valueOf(c.getType()))
+                                            .setOperation(ConditionOperationAvro.valueOf(c.getOperation()))
                                             .setValue(c.getValue())
-                                            .build()
-                                    ).toList()
+                                            .build())
+                                    .collect(Collectors.toList())
                     )
                     .setActions(
                             e.getActions().stream()
                                     .map(a -> DeviceActionAvro.newBuilder()
                                             .setSensorId(a.getSensorId())
-                                            .setType(ActionTypeAvro.valueOf(a.getType().name()))
+                                            .setType(ActionTypeAvro.valueOf(a.getType()))
                                             .setValue(a.getValue())
-                                            .build()
-                                    ).toList()
+                                            .build())
+                                    .collect(Collectors.toList())
                     )
                     .build();
-        }
 
-        if (event instanceof ScenarioRemovedEvent e) {
-            return ScenarioRemovedEventAvro.newBuilder()
-                    .setId(e.getScenarioId())
+        } else if (event instanceof ScenarioRemovedEvent e) {
+            payload = ScenarioRemovedEventAvro.newBuilder()
+                    .setName(e.getName())
                     .build();
+
+        } else {
+            throw new IllegalArgumentException("Unsupported hub event: " + event.getClass());
         }
 
-        throw new IllegalArgumentException("Unsupported hub event: " + event.getClass());
+        return HubEventAvro.newBuilder()
+                .setHubId(event.getHubId())
+                .setTimestamp(event.getTimestamp().toEpochMilli())
+                .setPayload(payload)
+                .build();
     }
 }
