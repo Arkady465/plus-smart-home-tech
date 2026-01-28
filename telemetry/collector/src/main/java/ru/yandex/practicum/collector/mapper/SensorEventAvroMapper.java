@@ -1,8 +1,9 @@
 package ru.yandex.practicum.collector.mapper;
 
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.avro.*;
 import ru.yandex.practicum.collector.model.sensor.*;
-import ru.yandex.practicum.kafka.telemetry.event.*;
+import ru.yandex.practicum.kafka.telemetry.event.SensorEventAvro;
 
 @Component
 public class SensorEventAvroMapper {

@@ -25,4 +25,12 @@ public class TemperatureSensorEvent extends SensorEvent {
     public void setTemperatureF(int temperatureF) {
         this.temperatureF = temperatureF;
     }
+
+    public Integer getValue() {
+        return getTemperatureC();
+    }
+
+    public Object getHumidity() {
+        throw new UnsupportedOperationException("Temperature sensor does not measure humidity");
+    }
 }

@@ -22,25 +22,13 @@ public class KafkaSendService {
 
     public void sendHubEvent(HubEventAvro event) {
         kafkaProducer.send(
-                new ProducerRecord<>(
-                        hubTopic,
-                        null,
-                        event.getTimestamp().toEpochMilli(),
-                        event.getHubId(),
-                        event
-                )
+                new ProducerRecord<>(hubTopic, event.getHubId(), event.getTimestamp().toEpochMilli(), event)
         );
     }
 
     public void sendSensorEvent(SensorEventAvro event) {
         kafkaProducer.send(
-                new ProducerRecord<>(
-                        sensorTopic,
-                        null,
-                        event.getTimestamp().toEpochMilli(),
-                        event.getHubId(),
-                        event
-                )
+                new ProducerRecord<>(sensorTopic, event.getHubId(), event.getTimestamp().toEpochMilli(), event)
         );
     }
 }
