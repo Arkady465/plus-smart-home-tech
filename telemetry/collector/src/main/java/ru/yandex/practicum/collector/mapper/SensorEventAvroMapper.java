@@ -12,35 +12,38 @@ public class SensorEventAvroMapper {
         Object payload;
 
         if (event instanceof MotionSensorEvent e) {
-            payload = MotionSensorEventAvro.newBuilder()
+
+            payload = MotionSensorPayloadAvro.newBuilder()
                     .setMotion(e.isMotion())
                     .build();
 
         } else if (event instanceof TemperatureSensorEvent e) {
-            payload = TemperatureSensorEventAvro.newBuilder()
-                    .setTemperature(e.getTemperature())
+
+            payload = ClimateSensorPayloadAvro.newBuilder()
+                    .setTemperature(e.getValue())
                     .setHumidity(e.getHumidity())
-                    .setCo2Level(e.getCo2Level())
+                    .setCo2Level(e.getCo2())
                     .build();
 
         } else if (event instanceof LightSensorEvent e) {
-            payload = LightSensorEventAvro.newBuilder()
+
+            payload = LightSensorPayloadAvro.newBuilder()
                     .setLuminosity(e.getLuminosity())
                     .build();
 
         } else if (event instanceof SwitchSensorEvent e) {
-            payload = SwitchSensorEventAvro.newBuilder()
+
+            payload = SwitchSensorPayloadAvro.newBuilder()
                     .setState(e.isState())
                     .build();
 
         } else {
-            throw new IllegalArgumentException("Unsupported sensor event: " + event.getClass());
+            throw new IllegalArgumentException("Unsupported SensorEvent: " + event.getClass());
         }
 
         return SensorEventAvro.newBuilder()
                 .setHubId(event.getHubId())
-                .setSensorId(event.getSensorId())
-                .setTimestamp(event.getTimestamp()) // Instant
+                .setTimestamp(event.getTimestamp())
                 .setPayload(payload)
                 .build();
     }
