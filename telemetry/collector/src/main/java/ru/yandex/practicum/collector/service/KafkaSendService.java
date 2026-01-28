@@ -25,7 +25,7 @@ public class KafkaSendService {
                 new ProducerRecord<>(
                         hubTopic,
                         null,
-                        event.getTimestamp(),
+                        event.getTimestamp().toEpochMilli(),
                         event.getHubId(),
                         event
                 );
@@ -38,7 +38,7 @@ public class KafkaSendService {
                 new ProducerRecord<>(
                         sensorTopic,
                         null,
-                        event.getTimestamp(),
+                        event.getTimestamp().toEpochMilli(),
                         event.getHubId(),
                         event
                 );
