@@ -6,51 +6,43 @@ import ru.yandex.practicum.kafka.telemetry.event.*;
 public class SensorEventAvroMapper {
 
     public static SensorEventAvro map(SensorEvent event) {
-        Object payload;
-
-        if (event instanceof LightSensorEvent e) {
-            payload = LightSensorAvro.newBuilder()
-                    .setLinkQuality(e.getLinkQuality())
-                    .setLuminosity(e.getLuminosity())
-                    .build();
-
-        } else if (event instanceof MotionSensorEvent e) {
-            payload = MotionSensorAvro.newBuilder()
-                    .setLinkQuality(e.getLinkQuality())
-                    .setMotion(e.isMotion())
-                    .setVoltage(e.getVoltage())
-                    .build();
-
-        } else if (event instanceof SwitchSensorEvent e) {
-            payload = SwitchSensorAvro.newBuilder()
-                    .setState(e.isState())
-                    .build();
-
-        } else if (event instanceof ClimateSensorEvent e) {
-            payload = ClimateSensorAvro.newBuilder()
-                    .setTemperatureC(e.getTemperatureC())
-                    .setHumidity(e.getHumidity())
-                    .setCo2Level(e.getCo2Level())
-                    .build();
-
-        } else if (event instanceof TemperatureSensorEvent e) {
-            payload = TemperatureSensorAvro.newBuilder()
-                    .setId(e.getId())
-                    .setHubId(e.getHubId())
-                    .setTimestamp(e.getTimestamp()) // ✅ Instant
-                    .setTemperatureC(e.getTemperatureC())
-                    .setTemperatureF(e.getTemperatureF())
-                    .build();
-
-        } else {
-            throw new IllegalArgumentException("Unsupported sensor event: " + event.getClass());
-        }
 
         return SensorEventAvro.newBuilder()
                 .setId(event.getId())
                 .setHubId(event.getHubId())
-                .setTimestamp(event.getTimestamp()) // ✅ Instant
-                .setPayload(payload)
+                .setTimestamp(event.getTimestamp())
+                .setPayload(mapPayload(event))
                 .build();
+    }
+
+    private static Object mapPayload(SensorEvent event) {
+
+        if (event instanceof LightSensorEvent e) {
+            return LightSensorAvro.newBuilder()
+                    .setLuminosity(e.getLuminosity())
+                    .build();
+        }
+
+        if (event instanceof MotionSensorEvent e) {
+            return MotionSensorAvro.newBuilder()
+                    .setMotion(e.isMotion())
+                    .build();
+        }
+
+        if (event instanceof SwitchSensorEvent e) {
+            return SwitchSensorAvro.newBuilder()
+                    .setState(e.isState())
+                    .build();
+        }
+
+        if (event instanceof ClimateSensorEvent e) {
+            return ClimateSensorAvro.newBuilder()
+                    .setTemperature(e.getTemperature())
+                    .setHumidity(e.getHumidity())
+                    .setCo2(e.getCo2())
+                    .build();
+        }
+
+        throw new IllegalArgumentException("Unsupported sensor event: " + event.getClass());
     }
 }

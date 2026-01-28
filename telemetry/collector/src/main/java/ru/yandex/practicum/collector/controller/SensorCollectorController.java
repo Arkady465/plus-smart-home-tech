@@ -1,26 +1,35 @@
 package ru.yandex.practicum.collector.controller;
 
-import org.springframework.kafka.core.KafkaTemplate;
+import lombok.RequiredArgsConstructor;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.collector.mapper.SensorEventAvroMapper;
 import ru.yandex.practicum.collector.model.sensor.SensorEvent;
+import ru.yandex.practicum.collector.serializer.AvroSerializer;
+import ru.yandex.practicum.kafka.telemetry.event.SensorEventAvro;
 
 @RestController
-@RequestMapping("/collect/sensors")
+@RequestMapping("/events/sensors")
+@RequiredArgsConstructor
 public class SensorCollectorController {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
-
-    public SensorCollectorController(KafkaTemplate<String, Object> kafkaTemplate) {
-        this.kafkaTemplate = kafkaTemplate;
-    }
+    private final KafkaProducer<String, byte[]> producer;
 
     @PostMapping
     public void collect(@RequestBody SensorEvent event) {
-        kafkaTemplate.send(
-                "telemetry.sensors.v1",
-                event.getHubId(),
-                SensorEventAvroMapper.map(event)
-        );
+        SensorEventAvro avro = SensorEventAvroMapper.map(event);
+        byte[] payload = AvroSerializer.serialize(avro);
+
+        ProducerRecord<String, byte[]> record =
+                new ProducerRecord<>(
+                        "telemetry.sensors.v1",
+                        null,
+                        event.getTimestamp().toEpochMilli(),
+                        event.getId(),
+                        payload
+                );
+
+        producer.send(record);
     }
 }
