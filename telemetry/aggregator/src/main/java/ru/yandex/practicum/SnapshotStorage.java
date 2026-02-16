@@ -16,7 +16,9 @@ public class SnapshotStorage {
     private final Map<String, SensorsSnapshotAvro> snapshots = new HashMap<>();
 
     public Optional<SensorsSnapshotAvro> updateState(SensorEventAvro event) {
-        SensorsSnapshotAvro snapshot = snapshots.get(event.getHubId());
+        // Используем строковое представление hubId как ключ для согласованности
+        String hubIdKey = event.getHubId().toString();
+        SensorsSnapshotAvro snapshot = snapshots.get(hubIdKey);
         if (snapshot == null) {
             snapshot = new SensorsSnapshotAvro();
             snapshot.setHubId(event.getHubId());
@@ -26,6 +28,7 @@ public class SnapshotStorage {
 
         SensorStateAvro oldState = snapshot.getSensorsState().get(event.getId());
         if (oldState != null) {
+            // Если пришло более старое событие или данные не изменились, снапшот не обновляем
             if (oldState.getTimestamp().isAfter(event.getTimestamp()) ||
                     oldState.getData().equals(event.getPayload())) {
                 return Optional.empty();
@@ -37,7 +40,7 @@ public class SnapshotStorage {
         newState.setData(event.getPayload());
         snapshot.getSensorsState().put(event.getId(), newState);
         snapshot.setTimestamp(event.getTimestamp());
-        snapshots.put(event.getHubId().toString(), snapshot);
+        snapshots.put(hubIdKey, snapshot);
         return Optional.of(snapshot);
     }
 }

@@ -19,6 +19,7 @@ import ru.yandex.practicum.repository.ScenarioRepository;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -30,82 +31,82 @@ public class SnapshotHandler {
     private final ScenarioActionProducer scenarioActionProducer;
 
     public void handleSnapshot(SensorsSnapshotAvro sensorsSnapshot) {
-        log.info("Зашли в метод handleSnapshot");
+        log.debug("Обработка снапшота для hubId={}", sensorsSnapshot.getHubId());
         Map<String, SensorStateAvro> sensorStateMap = sensorsSnapshot.getSensorsState();
         List<Scenario> scenarios = scenarioRepository.findByHubId(sensorsSnapshot.getHubId());
         scenarios.stream()
                 .filter(scenario -> handleScenario(scenario, sensorStateMap))
                 .forEach(scenario -> {
-                    log.info("send actions from scenario with name {}", scenario.getName());
+                    log.info("Выполнение сценария: hubId={}, имя сценария={}",
+                            sensorsSnapshot.getHubId(), scenario.getName());
                     sendScenarioActions(scenario);
                 });
     }
 
-    private Boolean handleScenario(Scenario scenario, Map<String, SensorStateAvro> sensorStateMap) {
+    private boolean handleScenario(Scenario scenario, Map<String, SensorStateAvro> sensorStateMap) {
         List<Condition> conditions = conditionRepository.findAllByScenario(scenario);
-        log.info("получили список кондиций {} у сценария name = {}", conditions, scenario.getName());
+        log.debug("Проверка условий сценария '{}': условий {}", scenario.getName(), conditions.size());
 
+        // Условия считаются выполненными, если ни одно условие не ложно
         return conditions.stream().noneMatch(condition -> !checkCondition(condition, sensorStateMap));
     }
 
-    private Boolean checkCondition(Condition condition, Map<String, SensorStateAvro> sensorStateMap) {
+    private boolean checkCondition(Condition condition, Map<String, SensorStateAvro> sensorStateMap) {
         String sensorId = condition.getSensor().getId();
         SensorStateAvro sensorState = sensorStateMap.get(sensorId);
         if (sensorState == null) {
+            log.debug("Сенсор {} не найден в снапшоте, условие не выполнено", sensorId);
             return false;
         }
         switch (condition.getType()) {
-            case LUMINOSITY -> {
+            case LUMINOSITY:
                 LightSensorAvro lightSensor = (LightSensorAvro) sensorState.getData();
                 return handleOperation(condition, lightSensor.getLuminosity());
-            }
-            case TEMPERATURE -> {
+            case TEMPERATURE:
                 ClimateSensorAvro temperatureSensor = (ClimateSensorAvro) sensorState.getData();
                 return handleOperation(condition, temperatureSensor.getTemperatureC());
-            }
-            case MOTION -> {
+            case MOTION:
                 MotionSensorAvro motionSensor = (MotionSensorAvro) sensorState.getData();
                 return handleOperation(condition, motionSensor.getMotion() ? 1 : 0);
-            }
-            case SWITCH -> {
+            case SWITCH:
                 SwitchSensorAvro switchSensor = (SwitchSensorAvro) sensorState.getData();
                 return handleOperation(condition, switchSensor.getState() ? 1 : 0);
-            }
-            case CO2LEVEL -> {
+            case CO2LEVEL:
                 ClimateSensorAvro climateSensor = (ClimateSensorAvro) sensorState.getData();
                 return handleOperation(condition, climateSensor.getCo2Level());
-            }
-            case HUMIDITY -> {
-                ClimateSensorAvro climateSensor = (ClimateSensorAvro) sensorState.getData();
-                return handleOperation(condition, climateSensor.getHumidity());
-            }
-            case null -> {
+            case HUMIDITY:
+                ClimateSensorAvro humiditySensor = (ClimateSensorAvro) sensorState.getData();
+                return handleOperation(condition, humiditySensor.getHumidity());
+            default:
+                log.error("Неизвестный тип условия: {}", condition.getType());
                 return false;
-            }
         }
     }
 
-    private Boolean handleOperation(Condition condition, Integer currentValue) {
+    private boolean handleOperation(Condition condition, Integer currentValue) {
         ConditionOperationAvro operation = condition.getOperation();
         Integer targetValue = condition.getValue();
+
+        if (operation == null) {
+            log.error("Операция условия не задана для условия: {}", condition);
+            return false;
+        }
+
         switch (operation) {
-            case EQUALS -> {
-                return targetValue == currentValue;
-            }
-            case LOWER_THAN -> {
+            case EQUALS:
+                return Objects.equals(targetValue, currentValue);
+            case LOWER_THAN:
                 return currentValue < targetValue;
-            }
-            case GREATER_THAN -> {
+            case GREATER_THAN:
                 return currentValue > targetValue;
-            }
-            case null -> {
-                return null;
-            }
+            default:
+                log.error("Неподдерживаемая операция: {}", operation);
+                return false;
         }
     }
 
     private void sendScenarioActions(Scenario scenario) {
-        log.info("Зашли в метод sendScenarioActions");
+        log.debug("Отправка действий для сценария '{}'", scenario.getName());
         actionRepository.findAllByScenario(scenario).forEach(scenarioActionProducer::sendAction);
     }
 }

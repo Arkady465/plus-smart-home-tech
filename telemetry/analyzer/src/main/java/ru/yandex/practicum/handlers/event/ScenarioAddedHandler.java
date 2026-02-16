@@ -40,24 +40,41 @@ public class ScenarioAddedHandler implements HubEventHandler {
         Optional<Scenario> scenarioOpt = scenarioRepository.findByHubIdAndName(event.getHubId(),
                 scenarioAddedEvent.getName());
 
+        Scenario scenario;
         if (scenarioOpt.isEmpty()) {
-            Scenario scenario = scenarioRepository.save(mapToScenario(event));
-            if (checkSensorsInScenarioConditions(scenarioAddedEvent, event.getHubId())) {
-                conditionRepository.saveAll(mapToCondition(scenarioAddedEvent, scenario));
-            }
-            if (checkSensorsInScenarioActions(scenarioAddedEvent, event.getHubId())) {
-                actionRepository.saveAll(mapToAction(scenarioAddedEvent, scenario));
-            }
+            // Новый сценарий
+            scenario = scenarioRepository.save(mapToScenario(event));
+            log.debug("Создан новый сценарий: hubId={}, name={}", event.getHubId(), scenarioAddedEvent.getName());
         } else {
-            Scenario scenario = scenarioOpt.get();
+            // Существующий сценарий — удаляем старые условия и действия перед обновлением
+            scenario = scenarioOpt.get();
+            log.debug("Обновление существующего сценария: id={}, hubId={}, name={}",
+                    scenario.getId(), event.getHubId(), scenarioAddedEvent.getName());
 
-            if (checkSensorsInScenarioConditions(scenarioAddedEvent, event.getHubId())) {
-                conditionRepository.saveAll(mapToCondition(scenarioAddedEvent, scenario));
-            }
+            // Удаляем связанные условия и действия (предполагается, что связи настроены правильно)
+            conditionRepository.deleteByScenario(scenario);
+            actionRepository.deleteByScenario(scenario);
+            // Очищаем коллекции в сущности (если нужно, но они не используются далее в этой транзакции)
+            // После удаления можно сохранить новые условия и действия
+        }
 
-            if (checkSensorsInScenarioActions(scenarioAddedEvent, event.getHubId())) {
-                actionRepository.saveAll(mapToAction(scenarioAddedEvent, scenario));
-            }
+        // Сохраняем условия и действия только если все необходимые сенсоры существуют
+        if (checkSensorsInScenarioConditions(scenarioAddedEvent, event.getHubId())) {
+            Set<Condition> conditions = mapToCondition(scenarioAddedEvent, scenario);
+            conditionRepository.saveAll(conditions);
+            log.debug("Сохранено {} условий для сценария {}", conditions.size(), scenario.getName());
+        } else {
+            log.warn("Не все сенсоры для условий сценария {} существуют, условия не сохранены",
+                    scenarioAddedEvent.getName());
+        }
+
+        if (checkSensorsInScenarioActions(scenarioAddedEvent, event.getHubId())) {
+            Set<Action> actions = mapToAction(scenarioAddedEvent, scenario);
+            actionRepository.saveAll(actions);
+            log.debug("Сохранено {} действий для сценария {}", actions.size(), scenario.getName());
+        } else {
+            log.warn("Не все сенсоры для действий сценария {} существуют, действия не сохранены",
+                    scenarioAddedEvent.getName());
         }
     }
 
@@ -76,22 +93,43 @@ public class ScenarioAddedHandler implements HubEventHandler {
     }
 
     private Set<Condition> mapToCondition(ScenarioAddedEventAvro scenarioAddedEvent, Scenario scenario) {
+        // Собираем все ID сенсоров, используемых в условиях
+        List<String> sensorIds = scenarioAddedEvent.getConditions().stream()
+                .map(ScenarioConditionAvro::getSensorId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Загружаем сенсоры одним запросом
+        Map<String, Sensor> sensorMap = sensorRepository.findAllById(sensorIds).stream()
+                .collect(Collectors.toMap(Sensor::getId, sensor -> sensor));
+
         return scenarioAddedEvent.getConditions().stream()
-                .map(c -> Condition.builder()
-                        .sensor(sensorRepository.findById(c.getSensorId()).orElseThrow())
-                        .scenario(scenario)
-                        .type(c.getType())
-                        .operation(c.getOperation())
-                        .value(setValue(c.getValue()))
-                        .build())
+                .map(c -> {
+                    Sensor sensor = sensorMap.get(c.getSensorId());
+                    if (sensor == null) {
+                        // Эта ситуация не должна возникать, т.к. перед вызовом выполняется проверка,
+                        // но на всякий случай логируем и пропускаем условие
+                        log.error("Сенсор с ID {} не найден при создании условия для сценария {}",
+                                c.getSensorId(), scenario.getName());
+                        return null;
+                    }
+                    return Condition.builder()
+                            .sensor(sensor)
+                            .scenario(scenario)
+                            .type(c.getType())
+                            .operation(c.getOperation())
+                            .value(convertConditionValue(c.getValue()))
+                            .build();
+                })
+                .filter(condition -> condition != null)
                 .collect(Collectors.toSet());
     }
 
     private Set<Action> mapToAction(ScenarioAddedEventAvro scenarioAddedEvent, Scenario scenario) {
-        log.info("Обрабатываем список действий {}", scenarioAddedEvent.getActions());
+        log.debug("Обрабатываем список действий для сценария {}: {}", scenario.getName(), scenarioAddedEvent.getActions());
 
         List<String> sensorIds = scenarioAddedEvent.getActions().stream()
-                .map(action -> action.getSensorId())
+                .map(DeviceActionAvro::getSensorId)
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -102,8 +140,9 @@ public class ScenarioAddedHandler implements HubEventHandler {
                 .map(action -> {
                     Sensor sensor = sensorMap.get(action.getSensorId());
                     if (sensor == null) {
-                        throw new IllegalArgumentException(
-                                "Сенсор с ID " + action.getSensorId() + " не найден");
+                        log.error("Сенсор с ID {} не найден при создании действия для сценария {}",
+                                action.getSensorId(), scenario.getName());
+                        return null;
                     }
                     return Action.builder()
                             .sensor(sensor)
@@ -112,26 +151,32 @@ public class ScenarioAddedHandler implements HubEventHandler {
                             .value(action.getValue())
                             .build();
                 })
+                .filter(action -> action != null)
                 .collect(Collectors.toSet());
     }
 
-    private Integer setValue(Object value) {
+    private Integer convertConditionValue(Object value) {
         if (value instanceof Integer) {
             return (Integer) value;
-        } else {
+        } else if (value instanceof Boolean) {
             return (Boolean) value ? 1 : 0;
+        } else {
+            log.warn("Неизвестный тип значения условия: {}. Будет использовано значение по умолчанию 0", value);
+            return 0;
         }
     }
 
     private boolean checkSensorsInScenarioConditions(ScenarioAddedEventAvro scenarioAddedEvent, String hubId) {
-        return sensorRepository.existsByIdInAndHubId(scenarioAddedEvent.getConditions().stream()
+        List<String> sensorIds = scenarioAddedEvent.getConditions().stream()
                 .map(ScenarioConditionAvro::getSensorId)
-                .toList(), hubId);
+                .collect(Collectors.toList());
+        return sensorRepository.existsByIdInAndHubId(sensorIds, hubId);
     }
 
     private boolean checkSensorsInScenarioActions(ScenarioAddedEventAvro scenarioAddedEvent, String hubId) {
-        return sensorRepository.existsByIdInAndHubId(scenarioAddedEvent.getActions().stream()
+        List<String> sensorIds = scenarioAddedEvent.getActions().stream()
                 .map(DeviceActionAvro::getSensorId)
-                .toList(), hubId);
+                .collect(Collectors.toList());
+        return sensorRepository.existsByIdInAndHubId(sensorIds, hubId);
     }
 }

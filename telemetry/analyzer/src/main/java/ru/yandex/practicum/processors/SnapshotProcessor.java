@@ -26,32 +26,51 @@ public class SnapshotProcessor {
     public void start() {
         try {
             snapshotConsumer.subscribe(List.of(snapshotsTopic));
-            log.info("Подписались на топик снапшотов");
+            log.info("Подписались на топик снапшотов: {}", snapshotsTopic);
 
             Runtime.getRuntime().addShutdownHook(new Thread(snapshotConsumer::wakeup));
-            log.info("Добавили wakeup");
+            log.debug("Добавили shutdown hook с wakeup");
 
             while (true) {
                 ConsumerRecords<String, SensorsSnapshotAvro> records =
                         snapshotConsumer.poll(Duration.ofMillis(1000));
 
-                for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
-                    SensorsSnapshotAvro sensorsSnapshot = record.value();
-                    log.info("Получили снимок состояния умного дома: {}", sensorsSnapshot);
+                boolean hasErrors = false;
 
-                    snapshotHandler.handleSnapshot(sensorsSnapshot);
-                    log.info("Передали в метод snapshotHandler.handleSnapshot: {}", sensorsSnapshot);
+                for (ConsumerRecord<String, SensorsSnapshotAvro> record : records) {
+                    try {
+                        SensorsSnapshotAvro sensorsSnapshot = record.value();
+                        log.debug("Получен снапшот для hubId={}, timestamp={}",
+                                sensorsSnapshot.getHubId(), sensorsSnapshot.getTimestamp());
+
+                        snapshotHandler.handleSnapshot(sensorsSnapshot);
+                        log.debug("Снапшот обработан успешно");
+                    } catch (Exception e) {
+                        log.error("Ошибка при обработке снапшота: ключ={}, значение={}",
+                                record.key(), record.value(), e);
+                        hasErrors = true;
+                    }
                 }
 
-                snapshotConsumer.commitSync();
-                log.info("Хартбит снапшот");
+                if (!hasErrors && !records.isEmpty()) {
+                    try {
+                        snapshotConsumer.commitSync();
+                        log.debug("Оффсеты снапшотов зафиксированы");
+                    } catch (Exception e) {
+                        log.error("Ошибка при фиксации оффсетов снапшотов", e);
+                    }
+                } else if (hasErrors) {
+                    log.warn("В текущей пачке снапшотов были ошибки, коммит оффсетов пропущен");
+                }
             }
         } catch (WakeupException ignored) {
+            log.info("Получен WakeupException, инициируем завершение работы процессора снапшотов");
         } catch (Exception e) {
-            log.error("Ошибка во время обработки снапшота", e);
+            log.error("Необработанная ошибка в процессоре снапшотов", e);
         } finally {
             try {
-                snapshotConsumer.commitSync();
+
+                log.info("Завершение работы процессора снапшотов, закрываем consumer");
             } finally {
                 snapshotConsumer.close();
             }

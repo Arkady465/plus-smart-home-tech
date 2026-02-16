@@ -25,25 +25,35 @@ public class ScenarioActionProducer {
     }
 
     public void sendAction(Action action) {
-        log.info("Зашли в метод sendAction");
         DeviceActionRequest actionRequest = mapToActionRequest(action);
-        log.info("получили actionRequest");
+        log.debug("Сформирован запрос на выполнение действия: {}", actionRequest);
 
         try {
             Empty response = hubRouterStub.handleDeviceAction(actionRequest);
-            log.info("Действие {} отправлено в hub-router", actionRequest);
+            log.info("Действие для сценария '{}' (hubId={}) отправлено: сенсор={}, тип={}, значение={}",
+                    action.getScenario().getName(),
+                    action.getScenario().getHubId(),
+                    action.getSensor().getId(),
+                    action.getType(),
+                    action.getValue());
             if (response.isInitialized()) {
-                log.info("Получили ответ от хаба");
+                log.debug("Получен ответ от hub-router: запрос успешно обработан");
             } else {
-                log.info("Нет ответа от хаба");
+                log.debug("Ответ от hub-router не содержит данных (возможно, пустой)");
             }
         } catch (RuntimeException e) {
-            log.info("Поймали ошибку отправки в хаброутер");
+            log.error("Ошибка при отправке действия в hub-router: сценарий='{}', hubId={}, сенсор={}, тип={}, значение={}",
+                    action.getScenario().getName(),
+                    action.getScenario().getHubId(),
+                    action.getSensor().getId(),
+                    action.getType(),
+                    action.getValue(),
+                    e);
         }
     }
 
     private DeviceActionRequest mapToActionRequest(Action action) {
-        log.info("Зашли в метод mapToActionRequest");
+        log.debug("Преобразование действия в DeviceActionRequest: {}", action);
         return DeviceActionRequest.newBuilder()
                 .setHubId(action.getScenario().getHubId())
                 .setScenarioName(action.getScenario().getName())
@@ -57,7 +67,7 @@ public class ScenarioActionProducer {
     }
 
     private ActionTypeProto mapActionType(ActionTypeAvro actionType) {
-        log.info("мапим тип действия {}", actionType);
+        log.debug("Маппинг типа действия: {}", actionType);
         return switch (actionType) {
             case ACTIVATE -> ActionTypeProto.ACTIVATE;
             case DEACTIVATE -> ActionTypeProto.DEACTIVATE;

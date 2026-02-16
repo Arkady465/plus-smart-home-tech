@@ -25,42 +25,66 @@ public class HubEventProcessor implements Runnable {
     @Value("${kafka.topics.hubs}")
     private String hubsTopic;
 
-
     @Override
     public void run() {
         try {
             hubConsumer.subscribe(List.of(hubsTopic));
-            log.info("Подписались на топик хабов");
+            log.info("Подписались на топик хабов: {}", hubsTopic);
+
             Runtime.getRuntime().addShutdownHook(new Thread(hubConsumer::wakeup));
+            log.debug("Добавлен shutdown hook с wakeup");
+
             Map<String, HubEventHandler> handlerMap = handlers.getHandlers();
 
             while (true) {
-
                 ConsumerRecords<String, HubEventAvro> records = hubConsumer.poll(Duration.ofMillis(1000));
+                boolean hasErrors = false;
 
                 for (ConsumerRecord<String, HubEventAvro> record : records) {
-                    HubEventAvro event = record.value();
-                    String payloadName = event.getPayload().getClass().getSimpleName();
-                    log.info("Получили сообщение хаба типа: {}", payloadName);
+                    try {
+                        HubEventAvro event = record.value();
+                        String payloadName = event.getPayload().getClass().getSimpleName();
+                        log.debug("Получено событие хаба типа: {}, ключ={}", payloadName, record.key());
 
-                    if (handlerMap.containsKey(payloadName)) {
-                        handlerMap.get(payloadName).handle(event);
-                    } else {
-                        throw new IllegalArgumentException("Не могу найти обработчик для события " + event);
+                        HubEventHandler handler = handlerMap.get(payloadName);
+                        if (handler != null) {
+                            handler.handle(event);
+                            log.debug("Событие {} успешно обработано", payloadName);
+                        } else {
+                            log.error("Не найден обработчик для события типа {}", payloadName);
+                            throw new IllegalArgumentException("Не могу найти обработчик для события " + payloadName);
+                        }
+                    } catch (Exception e) {
+                        log.error("Ошибка при обработке записи хаба: ключ={}, значение={}",
+                                record.key(), record.value(), e);
+                        hasErrors = true;
                     }
                 }
 
-                hubConsumer.commitSync();
-                log.info("Хартбит хаб");
+                // Коммитим оффсеты только если не было ошибок и есть обработанные записи
+                if (!hasErrors && !records.isEmpty()) {
+                    try {
+                        hubConsumer.commitSync();
+                        log.debug("Оффсеты событий хабов зафиксированы");
+                    } catch (Exception e) {
+                        log.error("Ошибка при фиксации оффсетов событий хабов", e);
+
+                    }
+                } else if (hasErrors) {
+                    log.warn("В текущей пачке событий хабов были ошибки, коммит оффсетов пропущен");
+                }
             }
         } catch (WakeupException ignored) {
+            log.info("Получен WakeupException, инициируем завершение работы процессора событий хабов");
         } catch (Exception e) {
-            log.error("Ошибка чтения данных из топика {}", hubsTopic);
+            log.error("Необработанная ошибка в процессоре событий хабов", e);
         } finally {
+            // Закрываем consumer без дополнительного коммита, чтобы не зафиксировать ошибочные оффсеты
+            log.info("Завершение работы процессора событий хабов, закрываем consumer");
             try {
-                hubConsumer.commitSync();
-            } finally {
                 hubConsumer.close();
+            } catch (Exception e) {
+                log.error("Ошибка при закрытии consumer событий хабов", e);
             }
         }
     }
