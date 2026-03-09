@@ -12,4 +12,15 @@
     <artifactId>commerce</artifactId>
     <packaging>pom</packaging>
 
+    <modules>
+        <module>eureka-server</module>
+        <module>api-gateway</module>
+        <module>shopping-store</module>
+        <module>shopping-cart</module>
+        <module>order</module>
+        <module>warehouse</module>
+        <module>payment</module>
+        <module>delivery</module>
+    </modules>
+
 </project>
