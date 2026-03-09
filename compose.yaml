@@ -48,3 +48,19 @@ services:
         timeout: 5s
         interval: 5s
         retries: 10
+
+  db-init-commerce:
+    image: postgres:16.1
+    container_name: db-init-commerce
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPASSWORD: 12345
+      PGUSER: postgres
+      PGDATABASE: analyzer
+    volumes:
+      - ./init-commerce.sql:/init-commerce.sql:ro
+    command: ["psql", "-f", "/init-commerce.sql"]
+    restart: "no"
