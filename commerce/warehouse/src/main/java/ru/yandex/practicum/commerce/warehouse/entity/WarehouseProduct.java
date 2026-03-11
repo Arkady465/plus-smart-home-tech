@@ -16,8 +16,8 @@ public class WarehouseProduct {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private Long productId;
+    @Column(nullable = false, unique = true, length = 64)
+    private String productId;
 
     @Column(nullable = false)
     private int quantity;

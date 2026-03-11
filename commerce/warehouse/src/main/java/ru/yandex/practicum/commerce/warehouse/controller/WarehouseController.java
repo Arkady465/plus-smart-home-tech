@@ -28,7 +28,7 @@ public class WarehouseController implements WarehouseClient {
 
     @Override
     @PostMapping("/admin/products/{productId}/replenish")
-    public WarehouseProductDto replenish(@PathVariable Long productId, @RequestParam int quantity) {
+    public WarehouseProductDto replenish(@PathVariable String productId, @RequestParam int quantity) {
         return warehouseService.replenish(productId, quantity);
     }
 

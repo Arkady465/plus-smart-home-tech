@@ -40,6 +40,8 @@ public class Product {
     @Column(nullable = false)
     private int quantity;
 
+    private Double price;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

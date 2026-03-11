@@ -48,7 +48,7 @@ public class WarehouseService {
     }
 
     @Transactional
-    public WarehouseProductDto replenish(Long productId, int quantity) {
+    public WarehouseProductDto replenish(String productId, int quantity) {
         WarehouseProduct product = repository.findByProductId(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found in warehouse: " + productId));
         product.setQuantity(product.getQuantity() + quantity);
@@ -59,7 +59,9 @@ public class WarehouseService {
     public AvailabilityCheckResponseDto checkAvailability(AvailabilityCheckRequestDto request) {
         List<Long> insufficient = new ArrayList<>();
         for (CartItemDto item : request.getItems()) {
-            int available = repository.findByProductId(item.getProductId())
+            String pid = item.getProductId() != null ? String.valueOf(item.getProductId()) : null;
+            if (pid == null) continue;
+            int available = repository.findByProductId(pid)
                     .map(WarehouseProduct::getQuantity)
                     .orElse(0);
             if (available < item.getQuantity()) {
