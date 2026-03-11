@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class WarehouseProductDto {
     private Long id;
-    private Long productId;
+    private String productId;
     private int quantity;
     private Double width;
     private Double height;

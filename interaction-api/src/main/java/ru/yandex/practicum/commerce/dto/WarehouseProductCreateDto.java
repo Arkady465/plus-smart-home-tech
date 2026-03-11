@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class WarehouseProductCreateDto {
     @NotNull
-    private Long productId;
+    private String productId;
     @PositiveOrZero
     private int quantity;
     private Double width;

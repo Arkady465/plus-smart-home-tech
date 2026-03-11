@@ -20,7 +20,7 @@ public interface WarehouseClient {
     WarehouseProductDto addProduct(@RequestBody WarehouseProductCreateDto dto);
 
     @PostMapping("/admin/products/{productId}/replenish")
-    WarehouseProductDto replenish(@PathVariable Long productId, @RequestParam int quantity);
+    WarehouseProductDto replenish(@PathVariable String productId, @RequestParam int quantity);
 
     @PostMapping("/availability/check")
     AvailabilityCheckResponseDto checkAvailability(@RequestBody AvailabilityCheckRequestDto request);
