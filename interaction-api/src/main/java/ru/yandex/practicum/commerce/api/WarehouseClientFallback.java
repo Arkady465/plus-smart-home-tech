@@ -24,7 +24,7 @@ public class WarehouseClientFallback implements FallbackFactory<WarehouseClient>
             }
 
             @Override
-            public WarehouseProductDto replenish(Long productId, int quantity) {
+            public WarehouseProductDto replenish(String productId, int quantity) {
                 throw new WarehouseUnavailableException("Warehouse service is temporarily unavailable", cause);
             }
 
