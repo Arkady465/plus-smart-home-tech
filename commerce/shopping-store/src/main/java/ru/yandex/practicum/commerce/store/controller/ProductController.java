@@ -160,20 +160,7 @@ public class ProductController implements ShoppingStoreClient {
     public ProductApiDto removeProductApiV1(
             @RequestParam(required = false) Long productId,
             @RequestBody(required = false) Map<String, Object> body) {
-        Long id = productId;
-        if (id == null && body != null && body.containsKey("productId")) {
-            Object val = body.get("productId");
-            if (val instanceof Number) {
-                id = ((Number) val).longValue();
-            } else if (val != null) {
-                try {
-                    id = Long.parseLong(val.toString());
-                } catch (NumberFormatException ignored) {}
-            }
-        }
-        if (id == null) {
-            throw new IllegalArgumentException("productId is required");
-        }
+        Long id = resolveProductId(productId, body);
         productService.deleteProduct(id);
         return toApiDto(productRepository.findById(id).orElseThrow());
     }
@@ -183,32 +170,36 @@ public class ProductController implements ShoppingStoreClient {
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) ProductAvailability quantityState,
             @RequestBody(required = false) Map<String, Object> body) {
-        Long id = productId;
-        if (id == null && body != null && body.containsKey("productId")) {
-            Object val = body.get("productId");
-            if (val instanceof Number) {
-                id = ((Number) val).longValue();
-            } else if (val != null) {
-                try {
-                    id = Long.parseLong(val.toString());
-                } catch (NumberFormatException ignored) {}
-            }
-        }
-        if (id == null) {
-            throw new IllegalArgumentException("productId is required");
-        }
-        if (quantityState == null && body != null && body.containsKey("quantityState")) {
+        Long id = resolveProductId(productId, body);
+        ProductAvailability qtyState = quantityState;
+        if (qtyState == null && body != null && body.containsKey("quantityState")) {
             Object val = body.get("quantityState");
             if (val != null) {
                 try {
-                    quantityState = ProductAvailability.valueOf(val.toString());
+                    qtyState = ProductAvailability.valueOf(val.toString());
                 } catch (IllegalArgumentException ignored) {}
             }
         }
-        if (quantityState != null) {
-            productService.updateAvailability(id, quantityState);
+        if (qtyState != null) {
+            productService.updateAvailability(id, qtyState);
         }
         return toApiDto(productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id)));
+    }
+
+    private static Long resolveProductId(Long productId, Map<String, Object> body) {
+        if (productId != null) return productId;
+        if (body != null && body.containsKey("productId")) {
+            Object val = body.get("productId");
+            if (val instanceof Number) {
+                return ((Number) val).longValue();
+            }
+            if (val != null) {
+                try {
+                    return Long.parseLong(val.toString());
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        throw new IllegalArgumentException("productId is required");
     }
 
     private ProductApiDto toApiDto(Product product) {
