@@ -19,5 +19,5 @@ public class AvailabilityCheckResponseDto {
     /**
      * ID товаров, которых не хватает на складе.
      */
-    private List<Long> insufficientProductIds;
+    private List<Object> insufficientProductIds;
 }

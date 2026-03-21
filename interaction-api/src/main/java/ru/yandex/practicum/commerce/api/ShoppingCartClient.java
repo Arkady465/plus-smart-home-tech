@@ -15,11 +15,11 @@ public interface ShoppingCartClient {
     CartDto addItem(@PathVariable String username, @RequestBody CartItemDto item);
 
     @PutMapping("/carts/{username}/items/{productId}")
-    CartDto updateItemQuantity(@PathVariable String username, @PathVariable Long productId,
+    CartDto updateItemQuantity(@PathVariable String username, @PathVariable String productId,
                                @RequestParam int quantity);
 
     @DeleteMapping("/carts/{username}/items/{productId}")
-    CartDto removeItem(@PathVariable String username, @PathVariable Long productId);
+    CartDto removeItem(@PathVariable String username, @PathVariable String productId);
 
     @PostMapping("/carts/{username}/deactivate")
     CartDto deactivateCart(@PathVariable String username);

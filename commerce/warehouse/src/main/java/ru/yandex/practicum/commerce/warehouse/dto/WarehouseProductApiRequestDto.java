@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class WarehouseProductApiRequestDto {
     private DimensionDto dimension;
     private String productId;
+    private Integer quantity;
     private String weight;
     private String fragile;
 

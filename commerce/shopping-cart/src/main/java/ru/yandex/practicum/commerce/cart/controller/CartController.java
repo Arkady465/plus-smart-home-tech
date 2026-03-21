@@ -3,11 +3,13 @@ package ru.yandex.practicum.commerce.cart.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.commerce.api.ShoppingCartClient;
-import ru.yandex.practicum.commerce.cart.dto.CartApiRequestDto;
 import ru.yandex.practicum.commerce.cart.dto.CartItemApiDto;
 import ru.yandex.practicum.commerce.cart.service.CartService;
 import ru.yandex.practicum.commerce.dto.CartDto;
 import ru.yandex.practicum.commerce.dto.CartItemDto;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -30,14 +32,14 @@ public class CartController implements ShoppingCartClient {
 
     @Override
     @PutMapping("/carts/{username}/items/{productId}")
-    public CartDto updateItemQuantity(@PathVariable String username, @PathVariable Long productId,
+    public CartDto updateItemQuantity(@PathVariable String username, @PathVariable String productId,
                                       @RequestParam int quantity) {
         return cartService.updateItemQuantity(username, productId, quantity);
     }
 
     @Override
     @DeleteMapping("/carts/{username}/items/{productId}")
-    public CartDto removeItem(@PathVariable String username, @PathVariable Long productId) {
+    public CartDto removeItem(@PathVariable String username, @PathVariable String productId) {
         return cartService.removeItem(username, productId);
     }
 
@@ -54,16 +56,25 @@ public class CartController implements ShoppingCartClient {
     }
 
     @PutMapping("/api/v1/shopping-cart")
-    public CartDto updateCartApiV1(@RequestParam String username, @RequestBody(required = false) CartApiRequestDto body) {
-        if (body != null && body.getItems() != null) {
-            for (CartItemApiDto item : body.getItems()) {
-                Long pid = toLong(item.getProductId());
-                if (pid != null) {
-                    cartService.addItem(username, CartItemDto.builder()
-                            .productId(pid)
-                            .quantity(item.getQuantity())
-                            .build());
+    public CartDto updateCartApiV1(@RequestParam String username, @RequestBody(required = false) Map<String, Object> body) {
+        if (body != null && !body.isEmpty()) {
+            if (body.containsKey("items") && body.get("items") instanceof List) {
+                for (Object o : (List<?>) body.get("items")) {
+                    if (o instanceof Map) {
+                        Map<?, ?> item = (Map<?, ?>) o;
+                        Object pid = item.get("productId");
+                        Object qty = item.get("quantity");
+                        if (pid != null) {
+                            int quantity = qty instanceof Number ? ((Number) qty).intValue() : 0;
+                            cartService.addItem(username, CartItemDto.builder()
+                                    .productId(pid)
+                                    .quantity(quantity)
+                                    .build());
+                        }
+                    }
                 }
+            } else {
+                cartService.updateCartFromMap(username, body);
             }
         }
         return cartService.getCart(username);
@@ -71,16 +82,31 @@ public class CartController implements ShoppingCartClient {
 
     @PostMapping("/api/v1/shopping-cart/change-quantity")
     public CartDto changeQuantityApiV1(@RequestParam String username, @RequestBody CartItemApiDto item) {
-        Long pid = toLong(item.getProductId());
+        String pid = toProductIdString(item.getProductId());
         if (pid == null) return cartService.getCart(username);
-        return cartService.updateItemQuantity(username, pid, item.getQuantity());
+        int qty = item.getQuantity();
+        if (item.getNewQuantity() != null) {
+            qty = item.getNewQuantity();
+        }
+        return cartService.updateItemQuantity(username, pid, qty);
     }
 
     @PostMapping("/api/v1/shopping-cart/remove")
-    public CartDto removeItemApiV1(@RequestParam String username, @RequestBody CartItemApiDto item) {
-        Long pid = toLong(item.getProductId());
-        if (pid == null) return cartService.getCart(username);
-        return cartService.removeItem(username, pid);
+    public CartDto removeItemApiV1(@RequestParam String username, @RequestBody Object body) {
+        if (body instanceof List) {
+            List<String> ids = ((List<?>) body).stream()
+                    .filter(o -> o != null)
+                    .map(Object::toString)
+                    .toList();
+            return cartService.removeItems(username, ids);
+        }
+        if (body instanceof Map) {
+            Object pid = ((Map<?, ?>) body).get("productId");
+            if (pid != null) {
+                return cartService.removeItem(username, pid.toString());
+            }
+        }
+        return cartService.getCart(username);
     }
 
     @DeleteMapping("/api/v1/shopping-cart")
@@ -88,13 +114,8 @@ public class CartController implements ShoppingCartClient {
         return cartService.deactivateCart(username);
     }
 
-    private static Long toLong(Object o) {
+    private static String toProductIdString(Object o) {
         if (o == null) return null;
-        if (o instanceof Number) return ((Number) o).longValue();
-        try {
-            return Long.parseLong(o.toString());
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        return o.toString();
     }
 }

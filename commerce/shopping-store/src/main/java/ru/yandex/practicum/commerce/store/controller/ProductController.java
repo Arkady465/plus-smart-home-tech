@@ -88,6 +88,9 @@ public class ProductController implements ShoppingStoreClient {
             product.setPrice(dto.getPrice());
             productRepository.save(product);
         }
+        if (dto.getProductState() == ProductState.DEACTIVATE) {
+            productService.deleteProduct(result.getId());
+        }
         return toApiDto(productRepository.findById(result.getId()).orElseThrow());
     }
 
@@ -107,6 +110,9 @@ public class ProductController implements ShoppingStoreClient {
         if (dto.getPrice() != null) {
             product.setPrice(dto.getPrice());
             productRepository.save(product);
+        }
+        if (dto.getProductState() == ProductState.DEACTIVATE) {
+            productService.deleteProduct(result.getId());
         }
         return toApiDto(productRepository.findById(result.getId()).orElseThrow());
     }
@@ -148,8 +154,10 @@ public class ProductController implements ShoppingStoreClient {
     @PostMapping("/api/v1/shopping-store/quantityState")
     public ProductApiDto setQuantityStateApiV1(
             @RequestParam Long productId,
-            @RequestParam ProductAvailability quantityState) {
-        productService.updateAvailability(productId, quantityState);
+            @RequestParam(required = false) ProductAvailability quantityState) {
+        if (quantityState != null) {
+            productService.updateAvailability(productId, quantityState);
+        }
         return toApiDto(productRepository.findById(productId).orElseThrow());
     }
 

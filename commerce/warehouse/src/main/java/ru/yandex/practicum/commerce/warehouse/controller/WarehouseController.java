@@ -54,6 +54,9 @@ public class WarehouseController implements WarehouseClient {
 
     @PostMapping("/api/v1/warehouse/add")
     public WarehouseProductDto addProductPostApiV1(@RequestBody WarehouseProductApiRequestDto dto) {
+        if (dto.getProductId() != null && dto.getQuantity() != null && dto.getQuantity() > 0) {
+            return warehouseService.replenish(dto.getProductId(), dto.getQuantity());
+        }
         return warehouseService.addProduct(toCreateDto(dto));
     }
 
@@ -73,7 +76,7 @@ public class WarehouseController implements WarehouseClient {
         Boolean fragile = "true".equalsIgnoreCase(dto.getFragile());
         return WarehouseProductCreateDto.builder()
                 .productId(dto.getProductId())
-                .quantity(1)
+                .quantity(dto.getQuantity() != null ? dto.getQuantity() : 1)
                 .width(width)
                 .height(height)
                 .depth(depth)

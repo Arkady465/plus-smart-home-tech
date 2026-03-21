@@ -57,7 +57,7 @@ public class WarehouseService {
     }
 
     public AvailabilityCheckResponseDto checkAvailability(AvailabilityCheckRequestDto request) {
-        List<Long> insufficient = new ArrayList<>();
+        List<Object> insufficient = new ArrayList<>();
         for (CartItemDto item : request.getItems()) {
             String pid = item.getProductId() != null ? String.valueOf(item.getProductId()) : null;
             if (pid == null) continue;
@@ -65,7 +65,7 @@ public class WarehouseService {
                     .map(WarehouseProduct::getQuantity)
                     .orElse(0);
             if (available < item.getQuantity()) {
-                insufficient.add(item.getProductId());
+                insufficient.add(pid);
             }
         }
         return AvailabilityCheckResponseDto.builder()

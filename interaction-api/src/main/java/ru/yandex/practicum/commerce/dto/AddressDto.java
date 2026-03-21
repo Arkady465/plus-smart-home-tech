@@ -15,4 +15,5 @@ public class AddressDto {
     private String street;
     private String house;
     private String apartment;
+    private String flat;  // alias for apartment, used by Postman tests
 }

@@ -20,6 +20,7 @@ public class WarehouseConfig {
                 .street(addressValue)
                 .house(addressValue)
                 .apartment(addressValue)
+                .flat(addressValue)
                 .build();
     }
 }

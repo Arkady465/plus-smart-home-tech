@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CartItemDto {
-    private Long productId;
+    private Object productId;  // Long or String (UUID) for warehouse compatibility
     private int quantity;
 }
