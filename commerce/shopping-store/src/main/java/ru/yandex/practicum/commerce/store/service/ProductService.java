@@ -7,6 +7,7 @@ import ru.yandex.practicum.commerce.dto.*;
 import ru.yandex.practicum.commerce.store.entity.Product;
 import ru.yandex.practicum.commerce.store.repository.ProductRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,10 +32,13 @@ public class ProductService {
 
     @Transactional
     public ProductDto createProduct(ProductCreateUpdateDto dto) {
+        List<String> photos = dto.getPhotos() != null && !dto.getPhotos().isEmpty()
+                ? new ArrayList<>(dto.getPhotos())
+                : new ArrayList<>();
         Product product = Product.builder()
                 .name(dto.getName())
                 .description(dto.getDescription())
-                .photos(dto.getPhotos() != null ? dto.getPhotos() : List.of())
+                .photos(photos)
                 .category(dto.getCategory())
                 .quantity(0)
                 .state(ProductState.ACTIVE)
@@ -49,7 +53,10 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Product not found: " + id));
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
-        product.setPhotos(dto.getPhotos() != null ? dto.getPhotos() : List.of());
+        List<String> photos = dto.getPhotos() != null && !dto.getPhotos().isEmpty()
+                ? new ArrayList<>(dto.getPhotos())
+                : new ArrayList<>();
+        product.setPhotos(photos);
         product.setCategory(dto.getCategory());
         product = productRepository.save(product);
         return toDto(product);
