@@ -18,8 +18,8 @@
     <modules>
         <module>telemetry</module>
         <module>infra</module>
-        <module>commerce</module>
         <module>interaction-api</module>
+        <module>commerce</module>
     </modules>
 
     <properties>
