@@ -8,10 +8,12 @@ import ru.yandex.practicum.commerce.store.dto.ProductApiDto;
 import ru.yandex.practicum.commerce.store.dto.ProductApiRequestDto;
 import ru.yandex.practicum.commerce.store.dto.ProductPageDto;
 import ru.yandex.practicum.commerce.store.entity.Product;
+import ru.yandex.practicum.commerce.store.exception.ResourceNotFoundException;
 import ru.yandex.practicum.commerce.store.repository.ProductRepository;
 import ru.yandex.practicum.commerce.store.service.ProductService;
 
 import java.util.Comparator;
+import java.util.Map;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -149,22 +151,64 @@ public class ProductController implements ShoppingStoreClient {
 
     @GetMapping("/api/v1/shopping-store/{id}")
     public ProductApiDto getProductApiV1(@PathVariable Long id) {
-        return toApiDto(productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found: " + id)));
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
+        return toApiDto(product);
     }
 
     @PostMapping("/api/v1/shopping-store/removeProductFromStore")
-    public void removeProductApiV1(@RequestParam(required = false) Long productId) {
-        if (productId != null) productService.deleteProduct(productId);
+    public ProductApiDto removeProductApiV1(
+            @RequestParam(required = false) Long productId,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Long id = productId;
+        if (id == null && body != null && body.containsKey("productId")) {
+            Object val = body.get("productId");
+            if (val instanceof Number) {
+                id = ((Number) val).longValue();
+            } else if (val != null) {
+                try {
+                    id = Long.parseLong(val.toString());
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        if (id == null) {
+            throw new IllegalArgumentException("productId is required");
+        }
+        productService.deleteProduct(id);
+        return toApiDto(productRepository.findById(id).orElseThrow());
     }
 
     @PostMapping("/api/v1/shopping-store/quantityState")
     public ProductApiDto setQuantityStateApiV1(
-            @RequestParam Long productId,
-            @RequestParam(required = false) ProductAvailability quantityState) {
-        if (quantityState != null) {
-            productService.updateAvailability(productId, quantityState);
+            @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) ProductAvailability quantityState,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Long id = productId;
+        if (id == null && body != null && body.containsKey("productId")) {
+            Object val = body.get("productId");
+            if (val instanceof Number) {
+                id = ((Number) val).longValue();
+            } else if (val != null) {
+                try {
+                    id = Long.parseLong(val.toString());
+                } catch (NumberFormatException ignored) {}
+            }
         }
-        return toApiDto(productRepository.findById(productId).orElseThrow());
+        if (id == null) {
+            throw new IllegalArgumentException("productId is required");
+        }
+        if (quantityState == null && body != null && body.containsKey("quantityState")) {
+            Object val = body.get("quantityState");
+            if (val != null) {
+                try {
+                    quantityState = ProductAvailability.valueOf(val.toString());
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        if (quantityState != null) {
+            productService.updateAvailability(id, quantityState);
+        }
+        return toApiDto(productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id)));
     }
 
     private ProductApiDto toApiDto(Product product) {

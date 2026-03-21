@@ -25,6 +25,15 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        "error", "Not Found",
+                        "message", ex.getMessage() != null ? ex.getMessage() : "Resource not found"
+                ));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         log.warn("Validation error: {}", ex.getMessage());

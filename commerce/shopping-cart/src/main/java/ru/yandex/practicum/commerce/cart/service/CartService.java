@@ -155,7 +155,9 @@ public class CartService {
     }
 
     private CartDto toDto(Cart cart) {
-        List<CartItemDto> items = cart.getItems().stream()
+        List<CartItem> cartItems = cart.getItems();
+        if (cartItems == null) cartItems = java.util.Collections.emptyList();
+        List<CartItemDto> items = cartItems.stream()
                 .map(i -> CartItemDto.builder()
                         .productId(i.getProductId())
                         .quantity(i.getQuantity())
