@@ -62,6 +62,9 @@ public class ProductController implements ShoppingStoreClient {
     // === API v1 endpoints ===
     @PutMapping("/api/v1/shopping-store")
     public ProductApiDto addOrUpdateProductApiV1(@RequestBody ProductApiRequestDto dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
         if (dto.getProductName() == null || dto.getProductName().isBlank()) {
             throw new IllegalArgumentException("productName is required");
         }
@@ -80,11 +83,11 @@ public class ProductController implements ShoppingStoreClient {
         } else {
             result = productService.createProduct(createDto);
         }
-        Product product = productRepository.findById(result.getId()).orElseThrow();
         if (dto.getQuantityState() != null) {
             productService.updateAvailability(result.getId(), dto.getQuantityState());
         }
         if (dto.getPrice() != null) {
+            Product product = productRepository.findById(result.getId()).orElseThrow();
             product.setPrice(dto.getPrice());
             productRepository.save(product);
         }
@@ -96,6 +99,9 @@ public class ProductController implements ShoppingStoreClient {
 
     @PostMapping("/api/v1/shopping-store")
     public ProductApiDto createProductApiV1(@RequestBody ProductApiRequestDto dto) {
+        if (dto == null || dto.getProductName() == null || dto.getProductName().isBlank()) {
+            throw new IllegalArgumentException("productName is required");
+        }
         ProductCreateUpdateDto createDto = ProductCreateUpdateDto.builder()
                 .name(dto.getProductName())
                 .description(dto.getDescription())
@@ -106,8 +112,8 @@ public class ProductController implements ShoppingStoreClient {
         if (dto.getQuantityState() != null) {
             productService.updateAvailability(result.getId(), dto.getQuantityState());
         }
-        Product product = productRepository.findById(result.getId()).orElseThrow();
         if (dto.getPrice() != null) {
+            Product product = productRepository.findById(result.getId()).orElseThrow();
             product.setPrice(dto.getPrice());
             productRepository.save(product);
         }

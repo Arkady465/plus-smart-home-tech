@@ -4,3 +4,6 @@ spring:
 
 server:
   port: 0
+  error:
+    include-message: always
+    include-exception: true

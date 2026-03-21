@@ -1,3 +1,8 @@
+server:
+  error:
+    include-message: always
+    include-exception: true
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:shopping_store;DB_CLOSE_DELAY=-1}
