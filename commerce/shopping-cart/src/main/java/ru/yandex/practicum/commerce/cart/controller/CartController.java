@@ -8,6 +8,7 @@ import ru.yandex.practicum.commerce.cart.service.CartService;
 import ru.yandex.practicum.commerce.dto.CartDto;
 import ru.yandex.practicum.commerce.dto.CartItemDto;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,12 +52,12 @@ public class CartController implements ShoppingCartClient {
 
     // === API v1 endpoints ===
     @GetMapping("/api/v1/shopping-cart")
-    public CartDto getCartApiV1(@RequestParam String username) {
-        return cartService.getCart(username);
+    public Map<String, Object> getCartApiV1(@RequestParam String username) {
+        return toApiV1(cartService.getCart(username));
     }
 
     @PutMapping("/api/v1/shopping-cart")
-    public CartDto updateCartApiV1(@RequestParam String username, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> updateCartApiV1(@RequestParam String username, @RequestBody(required = false) Map<String, Object> body) {
         if (body != null && !body.isEmpty()) {
             if (body.containsKey("items") && body.get("items") instanceof List) {
                 for (Object o : (List<?>) body.get("items")) {
@@ -77,45 +78,63 @@ public class CartController implements ShoppingCartClient {
                 cartService.updateCartFromMap(username, body);
             }
         }
-        return cartService.getCart(username);
+        return toApiV1(cartService.getCart(username));
     }
 
     @PostMapping("/api/v1/shopping-cart/change-quantity")
-    public CartDto changeQuantityApiV1(@RequestParam String username, @RequestBody CartItemApiDto item) {
+    public Map<String, Object> changeQuantityApiV1(@RequestParam String username, @RequestBody CartItemApiDto item) {
         String pid = toProductIdString(item.getProductId());
-        if (pid == null) return cartService.getCart(username);
+        if (pid == null) return toApiV1(cartService.getCart(username));
         int qty = item.getQuantity();
         if (item.getNewQuantity() != null) {
             qty = item.getNewQuantity();
         }
-        return cartService.updateItemQuantity(username, pid, qty);
+        return toApiV1(cartService.updateItemQuantity(username, pid, qty));
     }
 
     @PostMapping("/api/v1/shopping-cart/remove")
-    public CartDto removeItemApiV1(@RequestParam String username, @RequestBody Object body) {
+    public Map<String, Object> removeItemApiV1(@RequestParam String username, @RequestBody Object body) {
         if (body instanceof List) {
             List<String> ids = ((List<?>) body).stream()
                     .filter(o -> o != null)
                     .map(Object::toString)
                     .toList();
-            return cartService.removeItems(username, ids);
+            return toApiV1(cartService.removeItems(username, ids));
         }
         if (body instanceof Map) {
             Object pid = ((Map<?, ?>) body).get("productId");
             if (pid != null) {
-                return cartService.removeItem(username, pid.toString());
+                return toApiV1(cartService.removeItem(username, pid.toString()));
             }
         }
-        return cartService.getCart(username);
+        return toApiV1(cartService.getCart(username));
     }
 
     @DeleteMapping("/api/v1/shopping-cart")
-    public CartDto deactivateCartApiV1(@RequestParam String username) {
-        return cartService.deactivateCart(username);
+    public Map<String, Object> deactivateCartApiV1(@RequestParam String username) {
+        return toApiV1(cartService.deactivateCart(username));
     }
 
     private static String toProductIdString(Object o) {
         if (o == null) return null;
         return o.toString();
+    }
+
+    private static Map<String, Object> toApiV1(CartDto dto) {
+        Map<String, Integer> products = new HashMap<>();
+        if (dto.getItems() != null) {
+            for (CartItemDto item : dto.getItems()) {
+                if (item != null && item.getProductId() != null) {
+                    products.put(item.getProductId().toString(), item.getQuantity());
+                }
+            }
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", dto.getId());
+        response.put("username", dto.getUsername());
+        response.put("state", dto.getState());
+        response.put("items", dto.getItems());
+        response.put("products", products);
+        return response;
     }
 }

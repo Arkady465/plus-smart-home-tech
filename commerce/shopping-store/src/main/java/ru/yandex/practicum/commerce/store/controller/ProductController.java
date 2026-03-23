@@ -6,7 +6,6 @@ import ru.yandex.practicum.commerce.api.ShoppingStoreClient;
 import ru.yandex.practicum.commerce.dto.*;
 import ru.yandex.practicum.commerce.store.dto.ProductApiDto;
 import ru.yandex.practicum.commerce.store.dto.ProductApiRequestDto;
-import ru.yandex.practicum.commerce.store.dto.ProductPageDto;
 import ru.yandex.practicum.commerce.store.entity.Product;
 import ru.yandex.practicum.commerce.store.exception.ResourceNotFoundException;
 import ru.yandex.practicum.commerce.store.repository.ProductRepository;
@@ -15,6 +14,7 @@ import ru.yandex.practicum.commerce.store.service.ProductService;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.List;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @RestController
@@ -126,7 +126,7 @@ public class ProductController implements ShoppingStoreClient {
     }
 
     @GetMapping("/api/v1/shopping-store")
-    public ProductPageDto getProductsApiV1(
+    public Map<String, Object> getProductsApiV1(
             @RequestParam(required = false) ProductCategory category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "150") int size,
@@ -146,7 +146,10 @@ public class ProductController implements ShoppingStoreClient {
         int to = Math.min(from + size, products.size());
         var paged = products.subList(Math.min(from, products.size()), to);
         var content = paged.stream().map(this::toApiDto).collect(Collectors.toList());
-        return ProductPageDto.builder().content(content).build();
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("products", content);
+        return response;
     }
 
     @GetMapping("/api/v1/shopping-store/{id}")
@@ -159,8 +162,10 @@ public class ProductController implements ShoppingStoreClient {
     @PostMapping("/api/v1/shopping-store/removeProductFromStore")
     public ProductApiDto removeProductApiV1(
             @RequestParam(required = false) Long productId,
+            @RequestParam(name = "product_id", required = false) Long productIdSnake,
+            @RequestParam(name = "id", required = false) Long idParam,
             @RequestBody(required = false) Map<String, Object> body) {
-        Long id = resolveProductId(productId, body);
+        Long id = resolveProductId(firstNonNull(productId, productIdSnake, idParam), body);
         productService.deleteProduct(id);
         return toApiDto(productRepository.findById(id).orElseThrow());
     }
@@ -168,9 +173,11 @@ public class ProductController implements ShoppingStoreClient {
     @PostMapping("/api/v1/shopping-store/quantityState")
     public ProductApiDto setQuantityStateApiV1(
             @RequestParam(required = false) Long productId,
+            @RequestParam(name = "product_id", required = false) Long productIdSnake,
+            @RequestParam(name = "id", required = false) Long idParam,
             @RequestParam(required = false) ProductAvailability quantityState,
             @RequestBody(required = false) Map<String, Object> body) {
-        Long id = resolveProductId(productId, body);
+        Long id = resolveProductId(firstNonNull(productId, productIdSnake, idParam), body);
         ProductAvailability qtyState = quantityState;
         if (qtyState == null && body != null && body.containsKey("quantityState")) {
             Object val = body.get("quantityState");
@@ -188,8 +195,10 @@ public class ProductController implements ShoppingStoreClient {
 
     private static Long resolveProductId(Long productId, Map<String, Object> body) {
         if (productId != null) return productId;
-        if (body != null && body.containsKey("productId")) {
-            Object val = body.get("productId");
+        if (body != null) {
+            Object val = body.containsKey("productId") ? body.get("productId")
+                    : body.containsKey("product_id") ? body.get("product_id")
+                    : body.get("id");
             if (val instanceof Number) {
                 return ((Number) val).longValue();
             }
@@ -200,6 +209,13 @@ public class ProductController implements ShoppingStoreClient {
             }
         }
         throw new IllegalArgumentException("productId is required");
+    }
+
+    private static Long firstNonNull(Long... values) {
+        for (Long value : values) {
+            if (value != null) return value;
+        }
+        return null;
     }
 
     private ProductApiDto toApiDto(Product product) {
