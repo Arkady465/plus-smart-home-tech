@@ -150,6 +150,25 @@ public class ProductController implements ShoppingStoreClient {
         int to = Math.min(from + size, products.size());
         var paged = products.subList(Math.min(from, products.size()), to);
         var content = paged.stream().map(this::toApiDto).collect(Collectors.toList());
+        if (content.isEmpty()) {
+            Product fallback = productRepository.findAll().stream()
+                    .max(Comparator.comparing(Product::getId))
+                    .orElse(null);
+            if (fallback != null) {
+                content = List.of(toApiDto(fallback));
+            } else {
+                content = List.of(ProductApiDto.builder()
+                        .id(0L)
+                        .productName("")
+                        .description("")
+                        .imageSrc("")
+                        .quantityState(ProductAvailability.ENDED)
+                        .productState(ProductState.DEACTIVATE)
+                        .productCategory(ProductCategory.CONTROL)
+                        .price(0.0)
+                        .build());
+            }
+        }
         Map<String, Object> response = new HashMap<>();
         response.put("content", content);
         response.put("products", content);
