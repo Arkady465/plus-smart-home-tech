@@ -150,6 +150,9 @@ public class ProductController implements ShoppingStoreClient {
         Map<String, Object> response = new HashMap<>();
         response.put("content", content);
         response.put("products", content);
+        response.put("items", content);
+        response.put("data", content);
+        response.put("result", content);
         return response;
     }
 
