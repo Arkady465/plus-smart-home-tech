@@ -127,12 +127,13 @@ public class ProductController implements ShoppingStoreClient {
 
     @GetMapping("/api/v1/shopping-store")
     public Map<String, Object> getProductsApiV1(
-            @RequestParam(required = false) ProductCategory category,
+            @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "150") int size,
             @RequestParam(required = false) String sort) {
-        var products = category != null
-                ? productRepository.findByStateAndCategory(ProductState.ACTIVE, category)
+        ProductCategory parsedCategory = parseCategory(category);
+        var products = parsedCategory != null
+                ? productRepository.findByStateAndCategory(ProductState.ACTIVE, parsedCategory)
                 : productRepository.findByState(ProductState.ACTIVE);
         if (sort != null && sort.contains(",")) {
             var parts = sort.split(",");
@@ -161,11 +162,11 @@ public class ProductController implements ShoppingStoreClient {
 
     @PostMapping("/api/v1/shopping-store/removeProductFromStore")
     public ProductApiDto removeProductApiV1(
-            @RequestParam(required = false) Long productId,
-            @RequestParam(name = "product_id", required = false) Long productIdSnake,
-            @RequestParam(name = "id", required = false) Long idParam,
+            @RequestParam(required = false) String productId,
+            @RequestParam(name = "product_id", required = false) String productIdSnake,
+            @RequestParam(name = "id", required = false) String idParam,
             @RequestBody(required = false) Map<String, Object> body) {
-        Long id = resolveProductIdOrNull(firstNonNull(productId, productIdSnake, idParam), body);
+        Long id = resolveProductIdOrNull(parseLongOrNull(firstNonNull(productId, productIdSnake, idParam)), body);
         if (id == null) {
             // Test compatibility fallback: if id was not passed, deactivate the latest active product.
             id = productRepository.findAll().stream()
@@ -186,13 +187,13 @@ public class ProductController implements ShoppingStoreClient {
 
     @PostMapping("/api/v1/shopping-store/quantityState")
     public ProductApiDto setQuantityStateApiV1(
-            @RequestParam(required = false) Long productId,
-            @RequestParam(name = "product_id", required = false) Long productIdSnake,
-            @RequestParam(name = "id", required = false) Long idParam,
-            @RequestParam(required = false) ProductAvailability quantityState,
+            @RequestParam(required = false) String productId,
+            @RequestParam(name = "product_id", required = false) String productIdSnake,
+            @RequestParam(name = "id", required = false) String idParam,
+            @RequestParam(required = false) String quantityState,
             @RequestBody(required = false) Map<String, Object> body) {
-        Long id = resolveProductId(firstNonNull(productId, productIdSnake, idParam), body);
-        ProductAvailability qtyState = quantityState;
+        Long id = resolveProductId(parseLongOrNull(firstNonNull(productId, productIdSnake, idParam)), body);
+        ProductAvailability qtyState = parseAvailability(quantityState);
         if (qtyState == null && body != null && body.containsKey("quantityState")) {
             Object val = body.get("quantityState");
             if (val != null) {
@@ -258,6 +259,40 @@ public class ProductController implements ShoppingStoreClient {
             if (value != null) return value;
         }
         return null;
+    }
+
+    private static String firstNonNull(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) return value;
+        }
+        return null;
+    }
+
+    private static Long parseLongOrNull(String value) {
+        if (value == null) return null;
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private static ProductCategory parseCategory(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return ProductCategory.valueOf(value);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private static ProductAvailability parseAvailability(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return ProductAvailability.valueOf(value);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private ProductApiDto toApiDto(Product product) {
