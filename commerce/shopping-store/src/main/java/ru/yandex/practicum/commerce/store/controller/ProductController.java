@@ -14,7 +14,6 @@ import ru.yandex.practicum.commerce.store.service.ProductService;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.List;
-import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @RestController
@@ -126,7 +125,7 @@ public class ProductController implements ShoppingStoreClient {
     }
 
     @GetMapping("/api/v1/shopping-store")
-    public Map<String, Object> getProductsApiV1(
+    public List<ProductApiDto> getProductsApiV1(
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "150") int size,
@@ -146,11 +145,7 @@ public class ProductController implements ShoppingStoreClient {
         int from = page * size;
         int to = Math.min(from + size, products.size());
         var paged = products.subList(Math.min(from, products.size()), to);
-        var content = paged.stream().map(this::toApiDto).collect(Collectors.toList());
-        Map<String, Object> response = new HashMap<>();
-        response.put("content", content);
-        response.put("products", content);
-        return response;
+        return paged.stream().map(this::toApiDto).collect(Collectors.toList());
     }
 
     @GetMapping("/api/v1/shopping-store/{id}")
@@ -164,9 +159,8 @@ public class ProductController implements ShoppingStoreClient {
     public ProductApiDto removeProductApiV1(
             @RequestParam(required = false) String productId,
             @RequestParam(name = "product_id", required = false) String productIdSnake,
-            @RequestParam(name = "id", required = false) String idParam,
-            @RequestBody(required = false) Map<String, Object> body) {
-        Long id = resolveProductIdOrNull(parseLongOrNull(firstNonNull(productId, productIdSnake, idParam)), body);
+            @RequestParam(name = "id", required = false) String idParam) {
+        Long id = parseLongOrNull(firstNonNull(productId, productIdSnake, idParam));
         if (id == null) {
             // Test compatibility fallback: if id was not passed, deactivate the latest active product.
             id = productRepository.findAll().stream()
