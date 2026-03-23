@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: shopping-store
+
+server:
+  port: 0
+  error:
+    include-message: always
+    include-exception: true
