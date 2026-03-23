@@ -14,6 +14,7 @@ import ru.yandex.practicum.commerce.store.service.ProductService;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.List;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @RestController
@@ -125,7 +126,7 @@ public class ProductController implements ShoppingStoreClient {
     }
 
     @GetMapping("/api/v1/shopping-store")
-    public List<ProductApiDto> getProductsApiV1(
+    public Map<String, Object> getProductsApiV1(
             @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "150") int size,
@@ -145,7 +146,11 @@ public class ProductController implements ShoppingStoreClient {
         int from = page * size;
         int to = Math.min(from + size, products.size());
         var paged = products.subList(Math.min(from, products.size()), to);
-        return paged.stream().map(this::toApiDto).collect(Collectors.toList());
+        var content = paged.stream().map(this::toApiDto).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("products", content);
+        return response;
     }
 
     @GetMapping("/api/v1/shopping-store/{id}")
