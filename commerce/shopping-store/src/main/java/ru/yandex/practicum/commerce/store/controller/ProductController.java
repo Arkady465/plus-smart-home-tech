@@ -187,6 +187,14 @@ public class ProductController implements ShoppingStoreClient {
                 } catch (IllegalArgumentException ignored) {}
             }
         }
+        if (qtyState == null && body != null && body.containsKey("quantity_state")) {
+            Object val = body.get("quantity_state");
+            if (val != null) {
+                try {
+                    qtyState = ProductAvailability.valueOf(val.toString());
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
         if (qtyState != null) {
             productService.updateAvailability(id, qtyState);
         }
