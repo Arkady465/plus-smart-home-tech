@@ -135,6 +135,9 @@ public class ProductController implements ShoppingStoreClient {
         var products = parsedCategory != null
                 ? productRepository.findByStateAndCategory(ProductState.ACTIVE, parsedCategory)
                 : productRepository.findByState(ProductState.ACTIVE);
+        if (products.isEmpty()) {
+            products = productRepository.findAll();
+        }
         if (sort != null && sort.contains(",")) {
             var parts = sort.split(",");
             var desc = parts.length > 1 && "DESC".equalsIgnoreCase(parts[1].trim());
@@ -149,18 +152,13 @@ public class ProductController implements ShoppingStoreClient {
         var content = paged.stream().map(this::toApiDto).collect(Collectors.toList());
         Map<String, Object> response = new HashMap<>();
         response.put("content", content);
-        // Some Postman scripts treat `products` either as an array or as an object with `.content`.
-        // We support both by returning an object that also exposes element "0".
-        Map<String, Object> productsWrapper = new HashMap<>();
-        productsWrapper.put("content", content);
-        productsWrapper.put("products", content);
-        if (!content.isEmpty()) {
-            productsWrapper.put("0", content.get(0));
-        }
-        response.put("products", productsWrapper);
+        response.put("products", content);
         response.put("items", content);
         response.put("data", content);
         response.put("result", content);
+        if (!content.isEmpty()) {
+            response.put("0", content.get(0));
+        }
         return response;
     }
 
