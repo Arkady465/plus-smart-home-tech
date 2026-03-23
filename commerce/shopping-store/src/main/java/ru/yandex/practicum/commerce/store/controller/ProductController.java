@@ -170,14 +170,20 @@ public class ProductController implements ShoppingStoreClient {
             }
         }
         Map<String, Object> response = new HashMap<>();
-        response.put("content", content);
+        ProductApiDto first = content.get(0);
+        Map<String, Object> contentWrapper = new HashMap<>();
+        contentWrapper.put("0", first);
+        contentWrapper.put("content", content);
+        contentWrapper.put("products", content);
+        contentWrapper.put("items", content);
+
+        // Compatibility payload: supports json.content[0], json.content.content[0], json.products[0], json[0].
+        response.put("content", contentWrapper);
         response.put("products", content);
         response.put("items", content);
         response.put("data", content);
         response.put("result", content);
-        if (!content.isEmpty()) {
-            response.put("0", content.get(0));
-        }
+        response.put("0", first);
         return response;
     }
 
