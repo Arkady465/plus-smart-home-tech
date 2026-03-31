@@ -19,4 +19,5 @@ public class ProductDto {
     private ProductCategory category;
     private ProductAvailability availability;
     private ProductState state;
+    private Double price;
 }

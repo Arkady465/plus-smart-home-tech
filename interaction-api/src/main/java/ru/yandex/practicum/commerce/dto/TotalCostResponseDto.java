@@ -1,0 +1,17 @@
+package ru.yandex.practicum.commerce.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class TotalCostResponseDto {
+    private Long orderId;
+    private Double totalCost;
+    private Double tax;
+}
+

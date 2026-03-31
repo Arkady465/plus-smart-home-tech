@@ -1,0 +1,28 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: order
+          uri: lb://order
+          predicates:
+            - Path=/order/**
+          filters:
+            - RewritePath=/order/(?<segment>.*), /api/v1/order/${segment}
+        - id: payment
+          uri: lb://payment
+          predicates:
+            - Path=/payment/**
+          filters:
+            - RewritePath=/payment/(?<segment>.*), /api/v1/payment/${segment}
+        - id: delivery
+          uri: lb://delivery
+          predicates:
+            - Path=/delivery/**
+          filters:
+            - RewritePath=/delivery/(?<segment>.*), /api/v1/delivery/${segment}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+

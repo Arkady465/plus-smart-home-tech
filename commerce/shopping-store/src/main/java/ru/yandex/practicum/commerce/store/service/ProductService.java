@@ -95,6 +95,7 @@ public class ProductService {
                 .category(product.getCategory())
                 .availability(quantityToAvailability(product.getQuantity()))
                 .state(product.getState())
+                .price(product.getPrice())
                 .build();
     }
 

@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.dto.*;
+import ru.yandex.practicum.commerce.warehouse.entity.OrderBooking;
+import ru.yandex.practicum.commerce.warehouse.entity.OrderBookingItem;
 import ru.yandex.practicum.commerce.warehouse.entity.WarehouseProduct;
+import ru.yandex.practicum.commerce.warehouse.repository.OrderBookingRepository;
 import ru.yandex.practicum.commerce.warehouse.repository.WarehouseProductRepository;
 
 import java.util.ArrayList;
@@ -15,6 +18,7 @@ import java.util.List;
 public class WarehouseService {
 
     private final WarehouseProductRepository repository;
+    private final OrderBookingRepository bookingRepository;
     private final AddressDto currentAddress;
 
     public List<WarehouseProductDto> getAllProducts() {
@@ -76,6 +80,65 @@ public class WarehouseService {
 
     public AddressDto getAddress() {
         return currentAddress;
+    }
+
+    @Transactional
+    public OrderAssemblyResponseDto assemblyProductForOrder(OrderAssemblyRequestDto request) {
+        if (request.getOrderId() == null) {
+            throw new IllegalArgumentException("orderId is required");
+        }
+        if (bookingRepository.findByOrderId(request.getOrderId()).isPresent()) {
+            return OrderAssemblyResponseDto.builder().orderId(request.getOrderId()).assembled(true).build();
+        }
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new IllegalArgumentException("items are required");
+        }
+        // Check availability and deduct
+        for (OrderItemDto item : request.getItems()) {
+            if (item == null || item.getProductId() == null) continue;
+            WarehouseProduct p = repository.findByProductId(item.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Product not found in warehouse: " + item.getProductId()));
+            if (p.getQuantity() < item.getQuantity()) {
+                throw new IllegalStateException("Insufficient stock for product: " + item.getProductId());
+            }
+        }
+        OrderBooking booking = OrderBooking.builder().orderId(request.getOrderId()).build();
+        for (OrderItemDto item : request.getItems()) {
+            if (item == null || item.getProductId() == null) continue;
+            WarehouseProduct p = repository.findByProductId(item.getProductId()).orElseThrow();
+            p.setQuantity(p.getQuantity() - item.getQuantity());
+            repository.save(p);
+            booking.getItems().add(OrderBookingItem.builder()
+                    .booking(booking)
+                    .productId(item.getProductId())
+                    .quantity(item.getQuantity())
+                    .build());
+        }
+        bookingRepository.save(booking);
+        return OrderAssemblyResponseDto.builder().orderId(request.getOrderId()).assembled(true).build();
+    }
+
+    @Transactional
+    public void shippedToDelivery(ShippedToDeliveryRequestDto request) {
+        if (request.getOrderId() == null) {
+            throw new IllegalArgumentException("orderId is required");
+        }
+        OrderBooking booking = bookingRepository.findByOrderId(request.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order booking not found: " + request.getOrderId()));
+        booking.setDeliveryId(request.getDeliveryId());
+        bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public void returnProducts(ProductReturnRequestDto request) {
+        if (request.getItems() == null) return;
+        for (OrderItemDto item : request.getItems()) {
+            if (item == null || item.getProductId() == null) continue;
+            WarehouseProduct p = repository.findByProductId(item.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Product not found in warehouse: " + item.getProductId()));
+            p.setQuantity(p.getQuantity() + item.getQuantity());
+            repository.save(p);
+        }
     }
 
     private WarehouseProductDto toDto(WarehouseProduct p) {

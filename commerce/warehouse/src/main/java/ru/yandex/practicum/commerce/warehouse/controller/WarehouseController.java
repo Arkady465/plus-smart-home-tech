@@ -65,6 +65,25 @@ public class WarehouseController implements WarehouseClient {
         return warehouseService.getAddress();
     }
 
+    // === Sprint 22 API v1 endpoints ===
+    @Override
+    @PostMapping("/api/v1/warehouse/assembly")
+    public OrderAssemblyResponseDto assemblyProductForOrder(@RequestBody OrderAssemblyRequestDto request) {
+        return warehouseService.assemblyProductForOrder(request);
+    }
+
+    @Override
+    @PostMapping("/api/v1/warehouse/shipped")
+    public void shippedToDelivery(@RequestBody ShippedToDeliveryRequestDto request) {
+        warehouseService.shippedToDelivery(request);
+    }
+
+    @Override
+    @PostMapping("/api/v1/warehouse/return")
+    public void returnProducts(@RequestBody ProductReturnRequestDto request) {
+        warehouseService.returnProducts(request);
+    }
+
     private WarehouseProductCreateDto toCreateDto(WarehouseProductApiRequestDto dto) {
         Double width = null, height = null, depth = null, weight = null;
         if (dto.getDimension() != null) {
