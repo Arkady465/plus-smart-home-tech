@@ -1,6 +1,8 @@
 package ru.yandex.practicum.commerce.delivery.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.api.OrderClient;
@@ -9,6 +11,7 @@ import ru.yandex.practicum.commerce.delivery.entity.DeliveryEntity;
 import ru.yandex.practicum.commerce.delivery.repository.DeliveryRepository;
 import ru.yandex.practicum.commerce.dto.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeliveryService {
@@ -34,6 +37,7 @@ public class DeliveryService {
             mapTo(request.getTo(), entity);
         }
         entity = deliveryRepository.save(entity);
+        log.info("Delivery planned id={} orderId={} status={}", entity.getId(), entity.getOrderId(), entity.getStatus());
         return toDto(entity);
     }
 
@@ -68,9 +72,11 @@ public class DeliveryService {
     @Transactional
     public DeliveryDto pickup(Long deliveryId) {
         DeliveryEntity entity = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+                .orElseThrow(() -> new EntityNotFoundException("Delivery not found: " + deliveryId));
+        DeliveryStatus previous = entity.getStatus();
         entity.setStatus(DeliveryStatus.IN_PROGRESS);
         entity = deliveryRepository.save(entity);
+        log.info("Delivery id={} orderId={} status transition {} -> {}", deliveryId, entity.getOrderId(), previous, DeliveryStatus.IN_PROGRESS);
         if (entity.getOrderId() != null) {
             warehouseClient.shippedToDelivery(ShippedToDeliveryRequestDto.builder()
                     .orderId(entity.getOrderId())
@@ -83,9 +89,11 @@ public class DeliveryService {
     @Transactional
     public DeliveryDto delivered(Long deliveryId) {
         DeliveryEntity entity = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+                .orElseThrow(() -> new EntityNotFoundException("Delivery not found: " + deliveryId));
+        DeliveryStatus previous = entity.getStatus();
         entity.setStatus(DeliveryStatus.DELIVERED);
         entity = deliveryRepository.save(entity);
+        log.info("Delivery id={} orderId={} status transition {} -> {}", deliveryId, entity.getOrderId(), previous, DeliveryStatus.DELIVERED);
         if (entity.getOrderId() != null) {
             orderClient.deliverySuccess(entity.getOrderId());
         }
@@ -95,9 +103,11 @@ public class DeliveryService {
     @Transactional
     public DeliveryDto failed(Long deliveryId) {
         DeliveryEntity entity = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+                .orElseThrow(() -> new EntityNotFoundException("Delivery not found: " + deliveryId));
+        DeliveryStatus previous = entity.getStatus();
         entity.setStatus(DeliveryStatus.FAILED);
         entity = deliveryRepository.save(entity);
+        log.info("Delivery id={} orderId={} status transition {} -> {}", deliveryId, entity.getOrderId(), previous, DeliveryStatus.FAILED);
         if (entity.getOrderId() != null) {
             orderClient.deliveryFailed(entity.getOrderId());
         }
@@ -107,9 +117,11 @@ public class DeliveryService {
     @Transactional
     public DeliveryDto cancel(Long deliveryId) {
         DeliveryEntity entity = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+                .orElseThrow(() -> new EntityNotFoundException("Delivery not found: " + deliveryId));
+        DeliveryStatus previous = entity.getStatus();
         entity.setStatus(DeliveryStatus.CANCELLED);
         entity = deliveryRepository.save(entity);
+        log.info("Delivery id={} orderId={} status transition {} -> {}", deliveryId, entity.getOrderId(), previous, DeliveryStatus.CANCELLED);
         return toDto(entity);
     }
 

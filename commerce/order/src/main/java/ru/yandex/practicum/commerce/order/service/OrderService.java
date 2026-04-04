@@ -1,6 +1,8 @@
 package ru.yandex.practicum.commerce.order.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.commerce.dto.*;
@@ -10,6 +12,7 @@ import ru.yandex.practicum.commerce.order.repository.OrderRepository;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -37,6 +40,7 @@ public class OrderService {
         }
 
         order = orderRepository.save(order);
+        log.info("Order created id={} username={} status={}", order.getId(), order.getUsername(), order.getStatus());
         return toDto(order);
     }
 
@@ -47,9 +51,11 @@ public class OrderService {
     @Transactional
     public OrderDto updateStatus(Long orderId, OrderStatus status) {
         OrderEntity order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                .orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
+        OrderStatus previous = order.getStatus();
         order.setStatus(status);
         order = orderRepository.save(order);
+        log.info("Order id={} status transition {} -> {}", orderId, previous, status);
         return toDto(order);
     }
 
