@@ -5,6 +5,10 @@ import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.commerce.dto.AddressDto;
 import ru.yandex.practicum.commerce.dto.AvailabilityCheckRequestDto;
 import ru.yandex.practicum.commerce.dto.AvailabilityCheckResponseDto;
+import ru.yandex.practicum.commerce.dto.OrderAssemblyRequestDto;
+import ru.yandex.practicum.commerce.dto.OrderAssemblyResponseDto;
+import ru.yandex.practicum.commerce.dto.ProductReturnRequestDto;
+import ru.yandex.practicum.commerce.dto.ShippedToDeliveryRequestDto;
 import ru.yandex.practicum.commerce.dto.WarehouseProductCreateDto;
 import ru.yandex.practicum.commerce.dto.WarehouseProductDto;
 
@@ -27,4 +31,13 @@ public interface WarehouseClient {
 
     @GetMapping("/address")
     AddressDto getAddress();
+
+    @PostMapping("/api/v1/warehouse/assembly")
+    OrderAssemblyResponseDto assemblyProductForOrder(@RequestBody OrderAssemblyRequestDto request);
+
+    @PostMapping("/api/v1/warehouse/shipped")
+    void shippedToDelivery(@RequestBody ShippedToDeliveryRequestDto request);
+
+    @PostMapping("/api/v1/warehouse/return")
+    void returnProducts(@RequestBody ProductReturnRequestDto request);
 }

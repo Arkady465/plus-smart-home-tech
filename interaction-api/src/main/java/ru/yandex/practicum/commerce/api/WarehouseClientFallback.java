@@ -37,6 +37,21 @@ public class WarehouseClientFallback implements FallbackFactory<WarehouseClient>
             public AddressDto getAddress() {
                 throw new WarehouseUnavailableException("Warehouse service is temporarily unavailable", cause);
             }
+
+            @Override
+            public OrderAssemblyResponseDto assemblyProductForOrder(OrderAssemblyRequestDto request) {
+                throw new WarehouseUnavailableException("Warehouse service is temporarily unavailable", cause);
+            }
+
+            @Override
+            public void shippedToDelivery(ShippedToDeliveryRequestDto request) {
+                throw new WarehouseUnavailableException("Warehouse service is temporarily unavailable", cause);
+            }
+
+            @Override
+            public void returnProducts(ProductReturnRequestDto request) {
+                throw new WarehouseUnavailableException("Warehouse service is temporarily unavailable", cause);
+            }
         };
     }
 
